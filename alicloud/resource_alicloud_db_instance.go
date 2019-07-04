@@ -65,7 +65,6 @@ func resourceAlicloudDBInstance() *schema.Resource {
 				Type:         schema.TypeString,
 				ValidateFunc: validateAllowedStringValue([]string{string(Postpaid), string(Prepaid)}),
 				Optional:     true,
-				ForceNew:     true,
 				Default:      Postpaid,
 			},
 			"period": {
@@ -314,6 +313,30 @@ func resourceAlicloudDBInstanceUpdate(d *schema.ResourceData, meta interface{}) 
 
 	if err := rdsService.setInstanceTags(d); err != nil {
 		return WrapError(err)
+	}
+
+	if !d.IsNewResource() && (d.HasChange("instance_charge_type") || d.HasChange("period")) {
+		prePaidRequest := rds.CreateModifyDBInstancePayTypeRequest()
+		prePaidRequest.DBInstanceId = d.Id()
+		prePaidRequest.Period = strconv.Itoa(d.Get("period").(int))
+
+		// for now we just support charge change from PostPaid to PrePaid
+		configPayType := PayType(d.Get("instance_charge_type").(string))
+		if configPayType == PrePaid {
+			raw, err := client.WithRdsClient(func(client *rds.Client) (interface{}, error) {
+				return client.ModifyDBInstancePayType(prePaidRequest)
+			})
+			if err != nil {
+				return WrapErrorf(err, DefaultErrorMsg, d.Id(), prePaidRequest.GetActionName(), AlibabaCloudSdkGoERROR)
+			}
+			addDebug(prePaidRequest.GetActionName(), raw)
+			// wait instance status is Normal after modifying
+			if err := rdsService.WaitForDBInstance(d.Id(), Normal, DefaultLongTimeout); err != nil {
+				return WrapError(err)
+			}
+			d.SetPartial("instance_charge_type")
+			d.SetPartial("period")
+		}
 	}
 
 	if d.HasChange("auto_renew") || d.HasChange("auto_renew_period") {
