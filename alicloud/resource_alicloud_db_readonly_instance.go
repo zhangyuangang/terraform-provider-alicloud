@@ -21,6 +21,12 @@ func resourceAlicloudDBReadonlyInstance() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(DefaultLongTimeout * time.Second),
+			Update: schema.DefaultTimeout(DefaultLongTimeout * time.Second),
+			Delete: schema.DefaultTimeout(DefaultLongTimeout * time.Second),
+		},
+
 		Schema: map[string]*schema.Schema{
 			"engine_version": &schema.Schema{
 				Type:     schema.TypeString,
@@ -120,7 +126,8 @@ func resourceAlicloudDBReadonlyInstanceCreate(d *schema.ResourceData, meta inter
 	d.SetId(resp.DBInstanceId)
 
 	// wait instance status change from Creating to running
-	if err := rdsService.WaitForDBInstance(d.Id(), Running, DefaultLongTimeout); err != nil {
+	stateConf := BuildStateConf([]string{"Creating"}, []string{"Running"}, d.Timeout(schema.TimeoutCreate), 3*time.Second, rdsService.RdsDBInstanceStateRefreshFunc(d.Id(), []string{"Deleting"}))
+	if _, err := stateConf.WaitForState(); err != nil {
 		return WrapError(err)
 	}
 
@@ -188,7 +195,8 @@ func resourceAlicloudDBReadonlyInstanceUpdate(d *schema.ResourceData, meta inter
 
 	if update {
 		// wait instance status is running before modifying
-		if err := rdsService.WaitForDBInstance(d.Id(), Running, DefaultTimeoutMedium); err != nil {
+		stateConf := BuildStateConf([]string{"Updating", "Modifying"}, []string{"Running"}, d.Timeout(schema.TimeoutUpdate), 3*time.Second, rdsService.RdsDBInstanceStateRefreshFunc(d.Id(), []string{"Deleting"}))
+		if _, err := stateConf.WaitForState(); err != nil {
 			return WrapError(err)
 		}
 
@@ -213,7 +221,7 @@ func resourceAlicloudDBReadonlyInstanceUpdate(d *schema.ResourceData, meta inter
 		}
 
 		// wait instance status is running after modifying
-		if err := rdsService.WaitForDBInstance(d.Id(), Running, DefaultLongTimeout); err != nil {
+		if _, err := stateConf.WaitForState(); err != nil {
 			return WrapError(err)
 		}
 	}
@@ -293,7 +301,9 @@ func resourceAlicloudDBReadonlyInstanceDelete(d *schema.ResourceData, meta inter
 		return WrapErrorf(err, DefaultErrorMsg, d.Id(), request.GetActionName(), AlibabaCloudSdkGoERROR)
 	}
 
-	return WrapError(rdsService.WaitForDBInstance(d.Id(), Deleted, DefaultTimeoutMedium))
+	stateConf := BuildStateConf([]string{"Creating", "Active", "Deleting"}, []string{}, d.Timeout(schema.TimeoutDelete), 3*time.Second, rdsService.RdsDBInstanceStateRefreshFunc(d.Id(), []string{}))
+	_, err = stateConf.WaitForState()
+	return WrapError(err)
 
 }
 

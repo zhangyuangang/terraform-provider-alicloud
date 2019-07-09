@@ -80,6 +80,16 @@ The following attributes are exported:
 * `id` - The ID of the MongoDB.
 * `retention_period` - Instance log backup retention days. Available in 1.42.0+.
 
+### Timeouts
+
+-> **NOTE:** Available in 1.51.0+.
+
+The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/docs/configuration-0-11/resources.html#timeouts) for certain actions:
+
+* `create` - (Defaults to 1000 second) Used when creating the MongoDB instance (until it reaches the initial `Active` status). 
+* `update` - (Defaults to 1000 second) Used when updating the MongoDB instance (until it reaches the initial `Active` status). 
+* `delete` - (Defaults to 1000 second) Used when terminating the MongoDB instance. 
+
 ## Import
 
 MongoDB can be imported using the id, e.g.
