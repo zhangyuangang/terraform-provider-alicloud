@@ -266,11 +266,11 @@ func resourceAlicloudKVStoreInstanceUpdate(d *schema.ResourceData, meta interfac
 		// for now we just support charge change from PostPaid to PrePaid
 		configPayType := PayType(d.Get("instance_charge_type").(string))
 		if configPayType == PrePaid {
-			raw, err := client.WithRkvClient(func(rkvClient *r_kvstore.Client) (interface{}, error) {
-				return rkvClient.TransformToPrePaid(prePaidRequest)
+			raw, err := client.WithRkvClient(func(client *r_kvstore.Client) (interface{}, error) {
+				return client.ModifyInstanceAutoRenewalAttribute(request)
 			})
 			if err != nil {
-				return WrapErrorf(err, DefaultErrorMsg, d.Id(), prePaidRequest.GetActionName(), AlibabaCloudSdkGoERROR)
+				return WrapErrorf(err, DefaultErrorMsg, d.Id(), request.GetActionName(), AlibabaCloudSdkGoERROR)
 			}
 			addDebug(prePaidRequest.GetActionName(), raw)
 			// wait instance status is Normal after modifying
