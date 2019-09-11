@@ -59,8 +59,7 @@ func resourceAlicloudMongoDBInstance() *schema.Resource {
 				Type:         schema.TypeString,
 				ValidateFunc: validateAllowedStringValue([]string{string(PrePaid), string(PostPaid)}),
 				Optional:     true,
-				ForceNew:     true,
-				Computed:     true,
+				Default:      Postpaid,
 			},
 			"period": {
 				Type:             schema.TypeInt,
@@ -245,7 +244,6 @@ func resourceAlicloudMongoDBInstanceRead(d *schema.ResourceData, meta interface{
 	if replication_factor, err := strconv.Atoi(instance.ReplicationFactor); err == nil {
 		d.Set("replication_factor", replication_factor)
 	}
-
 	return nil
 }
 
@@ -266,6 +264,29 @@ func resourceAlicloudMongoDBInstanceUpdate(d *schema.ResourceData, meta interfac
 	if d.IsNewResource() {
 		d.Partial(false)
 		return resourceAlicloudMongoDBInstanceRead(d, meta)
+	}
+
+	if !d.IsNewResource() && (d.HasChange("instance_charge_type") && PayType(d.Get("instance_charge_type").(string)) == PrePaid) {
+		prePaidRequest := dds.CreateTransformToPrePaidRequest()
+		prePaidRequest.RegionId = client.RegionId
+		prePaidRequest.InstanceId = d.Id()
+		prePaidRequest.Period = requests.NewInteger(d.Get("period").(int))
+		prePaidRequest.AutoPay = requests.NewBoolean(false)
+		raw, err := client.WithDdsClient(func(ddsClient *dds.Client) (interface{}, error) {
+			return ddsClient.TransformToPrePaid(prePaidRequest)
+		})
+		if err != nil {
+			return WrapErrorf(err, DefaultErrorMsg, d.Id(), prePaidRequest.GetActionName(), AlibabaCloudSdkGoERROR)
+		}
+		addDebug(prePaidRequest.GetActionName(), raw, prePaidRequest.RpcRequest, prePaidRequest)
+		// wait instance status is Normal after modifying
+		stateConf := BuildStateConf([]string{"DBInstanceClassChanging", "DBInstanceNetTypeChanging"}, []string{"Running"}, d.Timeout(schema.TimeoutUpdate), 30*time.Minute, ddsService.RdsMongodbDBInstanceStateRefreshFunc(d.Id(), []string{"Deleting"}))
+		if _, err := stateConf.WaitForState(); err != nil {
+			return WrapErrorf(err, IdMsg, d.Id())
+		}
+		d.SetPartial("instance_charge_type")
+		d.SetPartial("period")
+
 	}
 
 	if d.HasChange("name") {
@@ -318,7 +339,7 @@ func resourceAlicloudMongoDBInstanceUpdate(d *schema.ResourceData, meta interfac
 		request.ReplicationFactor = strconv.Itoa(d.Get("replication_factor").(int))
 
 		// wait instance status is running before modifying
-		stateConf := BuildStateConf([]string{"DBInstanceClassChanging", "DBInstanceNetTypeChanging"}, []string{"Running"}, d.Timeout(schema.TimeoutUpdate), 1*time.Minute, ddsService.RdsMongodbDBInstanceStateRefreshFunc(d.Id(), []string{"Deleting"}))
+		stateConf := BuildStateConf([]string{"DBInstanceClassChanging", "DBInstanceNetTypeChanging"}, []string{"Running"}, d.Timeout(schema.TimeoutUpdate), 30*time.Minute, ddsService.RdsMongodbDBInstanceStateRefreshFunc(d.Id(), []string{"Deleting"}))
 		if _, err := stateConf.WaitForState(); err != nil {
 			return WrapError(err)
 		}
