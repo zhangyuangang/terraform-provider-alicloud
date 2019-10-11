@@ -167,6 +167,14 @@ const (
 	DBInternalError                        = "InternalError"
 	DBOperationDeniedOutofUsage            = "OperationDenied.OutofUsage"
 
+	// polarDB
+	InvalidDBClusterIdNotFound      = "InvalidDBClusterId.NotFound"
+	InvalidDBClusterNameNotFound    = "InvalidDBClusterName.NotFound"
+	InvalidDBClusterStatus          = "OperationDenied.DBClusterStatus"
+	EndpointStatusNotSupport        = "EndpointStatus.NotSupport"
+	InvalidPolarDBClusterStatus     = "OperationDenied.PolarDBClusterStatus"
+	InvalidReadPolarDBClusterStatus = "OperationDenied.ReadPolarDBClusterStatus"
+
 	// oss
 	OssBucketNotFound                 = "NoSuchBucket"
 	OssBodyNotFound                   = "404 Not Found"
