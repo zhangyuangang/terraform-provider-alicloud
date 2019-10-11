@@ -29,6 +29,7 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/nas"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ons"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ots"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/polardb"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/pvtz"
 	r_kvstore "github.com/aliyun/alibaba-cloud-sdk-go/services/r-kvstore"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ram"
@@ -98,6 +99,7 @@ type AliyunClient struct {
 	gpdbconn                     *gpdb.Client
 	stsconn                      *sts.Client
 	rkvconn                      *r_kvstore.Client
+	polarDBconn                  *polardb.Client
 	dhconn                       *datahub.DataHub
 	mnsconn                      *ali_mns.MNSClient
 	cloudapiconn                 *cloudapi.Client
@@ -224,6 +226,35 @@ func (client *AliyunClient) WithRdsClient(do func(*rds.Client) (interface{}, err
 	}
 
 	return do(client.rdsconn)
+}
+
+func (client *AliyunClient) WithPolarDBClient(do func(*polardb.Client) (interface{}, error)) (interface{}, error) {
+	goSdkMutex.Lock()
+	defer goSdkMutex.Unlock()
+
+	// Initialize the DRDS client if necessary
+	if client.polarDBconn == nil {
+		endpoint := client.config.DrdsEndpoint
+		if endpoint == "" {
+			endpoint = loadEndpoint(client.config.RegionId, DRDSCode)
+			if endpoint == "" {
+				endpoint = fmt.Sprintf("%s.drds.aliyuncs.com", client.config.RegionId)
+			}
+		}
+
+		polarDBconn, err := drds.NewClientWithOptions(client.config.RegionId, client.getSdkConfig(), client.config.getAuthCredential(true))
+		if err != nil {
+			return nil, fmt.Errorf("unable to initialize the DRDS client: %#v", err)
+
+		}
+
+		polarDBconn.AppendUserAgent(Terraform, terraformVersion)
+		polarDBconn.AppendUserAgent(Provider, providerVersion)
+		polarDBconn.AppendUserAgent(Module, client.config.ConfigurationSource)
+		client.drdsconn = polarDBconn
+	}
+
+	return do(client.polarDBconn)
 }
 
 func (client *AliyunClient) WithSlbClient(do func(*slb.Client) (interface{}, error)) (interface{}, error) {
