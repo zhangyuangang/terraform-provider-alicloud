@@ -196,6 +196,12 @@ func resourceAlicloudDBInstance() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"security_ip_mode": {
+				Type:         schema.TypeString,
+				ValidateFunc: validateAllowedStringValue([]string{NormalMode, SafetyMode}),
+				Optional:     true,
+				Default:      NormalMode,
+			},
 			"connections": {
 				Type: schema.TypeList,
 				Elem: &schema.Resource{
@@ -482,6 +488,20 @@ func resourceAlicloudDBInstanceUpdate(d *schema.ResourceData, meta interface{}) 
 		d.SetPartial("security_ips")
 	}
 
+	if d.HasChange("security_ip_mode") && d.Get("security_ip_mode").(string) == SafetyMode {
+		request := rds.CreateMigrateSecurityIPModeRequest()
+		request.RegionId = client.RegionId
+		request.DBInstanceId = d.Id()
+		raw, err := client.WithRdsClient(func(rdsClient *rds.Client) (interface{}, error) {
+			return rdsClient.MigrateSecurityIPMode(request)
+		})
+		if err != nil {
+			return WrapErrorf(err, DefaultErrorMsg, d.Id(), request.GetActionName(), AlibabaCloudSdkGoERROR)
+		}
+		addDebug(request.GetActionName(), raw, request.RpcRequest, request)
+		d.SetPartial("security_ip_mode")
+	}
+
 	update := false
 	request := rds.CreateModifyDBInstanceSpecRequest()
 	request.RegionId = client.RegionId
@@ -567,6 +587,7 @@ func resourceAlicloudDBInstanceRead(d *schema.ResourceData, meta interface{}) er
 	d.Set("monitoring_period", monitoringPeriod)
 
 	d.Set("security_ips", ips)
+	d.Set("security_ip_mode", instance.SecurityIPMode)
 
 	d.Set("engine", instance.Engine)
 	d.Set("engine_version", instance.EngineVersion)
