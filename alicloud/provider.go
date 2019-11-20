@@ -408,6 +408,7 @@ func Provider() terraform.ResourceProvider {
 			"alicloud_sag_dnat_entry":                      resourceAlicloudSagDnatEntry(),
 			"alicloud_yundun_dbaudit_instance":             resourceAlicloudDbauditInstance(),
 			"alicloud_yundun_bastionhost_instance":         resourceAlicloudBastionhostInstance(),
+			"alicloud_polardb_account":                     resourceAlicloudPolarDBAccount(),
 		},
 
 		ConfigureFunc: providerConfigure,
