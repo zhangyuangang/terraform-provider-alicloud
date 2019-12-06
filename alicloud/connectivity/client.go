@@ -232,26 +232,26 @@ func (client *AliyunClient) WithPolarDBClient(do func(*polardb.Client) (interfac
 	goSdkMutex.Lock()
 	defer goSdkMutex.Unlock()
 
-	// Initialize the DRDS client if necessary
+	// Initialize the PolarDB client if necessary
 	if client.polarDBconn == nil {
-		endpoint := client.config.DrdsEndpoint
+		endpoint := client.config.PolarDBEndpoint
 		if endpoint == "" {
-			endpoint = loadEndpoint(client.config.RegionId, DRDSCode)
+			endpoint = loadEndpoint(client.config.RegionId, POLARDBCode)
 			if endpoint == "" {
-				endpoint = fmt.Sprintf("%s.drds.aliyuncs.com", client.config.RegionId)
+				endpoint = fmt.Sprintf("%s.polardb.aliyuncs.com", client.config.RegionId)
 			}
 		}
 
-		polarDBconn, err := drds.NewClientWithOptions(client.config.RegionId, client.getSdkConfig(), client.config.getAuthCredential(true))
+		polarDBconn, err := polardb.NewClientWithOptions(client.config.RegionId, client.getSdkConfig(), client.config.getAuthCredential(true))
 		if err != nil {
-			return nil, fmt.Errorf("unable to initialize the DRDS client: %#v", err)
+			return nil, fmt.Errorf("unable to initialize the PolarDB client: %#v", err)
 
 		}
 
 		polarDBconn.AppendUserAgent(Terraform, terraformVersion)
 		polarDBconn.AppendUserAgent(Provider, providerVersion)
 		polarDBconn.AppendUserAgent(Module, client.config.ConfigurationSource)
-		client.drdsconn = polarDBconn
+		client.polarDBconn = polarDBconn
 	}
 
 	return do(client.polarDBconn)
