@@ -226,7 +226,7 @@ func resourceAlicloudPolarDBConnectionDelete(d *schema.ResourceData, meta interf
 			return polarDBClient.DeleteDBEndpointAddress(request)
 		})
 		if err != nil {
-			if IsExceptedErrors(err, []string{"EndpointStatus.NotSupport"}) {
+			if IsExceptedErrors(err, []string{"OperationDenied.DBClusterStatus", "EndpointStatus.NotSupport"}) {
 				return resource.RetryableError(err)
 			}
 			return resource.NonRetryableError(err)
