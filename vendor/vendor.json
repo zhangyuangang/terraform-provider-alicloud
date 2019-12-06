@@ -1,0 +1,25 @@
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "KiQ8x8J+s77oyPSfTINB7l2Pr3c=",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/services/dds",
+			"revision": "a4c990e7ed59f62bdca9cf948080934aa05040e7",
+			"revisionTime": "2019-11-26T06:49:18Z"
+		},
+		{
+			"checksumSHA1": "CvneFzcrIsQ9SUMmXggqW0aGoVw=",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/services/polardb",
+			"revision": "03194a07d5ce4832765fb252b283ec722387347c",
+			"revisionTime": "2019-11-25T09:39:49Z"
+		},
+		{
+			"checksumSHA1": "RodR7A76j9249o83bIoC/poQPPM=",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/services/rds",
+			"revision": "de62006faf9900bd25334982ab7f4c4c78f96cb1",
+			"revisionTime": "2019-07-03T05:57:46Z"
+		}
+	],
+	"rootPath": "github.com/terraform-providers/terraform-provider-alicloud"
+}
