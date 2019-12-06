@@ -16,16 +16,8 @@ func TestAccAlicloudPolarClusterEndPointsDataSource(t *testing.T) {
 			"cluster_id": `"${alicloud_polardb_cluster.default.id}"`,
 		}),
 		fakeConfig: testAccCheckAlicloudPolarClusterEndPointsDataSourceConfig(rand, map[string]string{
-			"cluster_id": `"^test1234"`,
-		}),
-	}
-
-	allConf := dataSourceTestAccConfig{
-		existConfig: testAccCheckAlicloudPolarClusterEndPointsDataSourceConfig(rand, map[string]string{
-			"cluster_id": `"${alicloud_polardb_cluster.default.id}"`,
-		}),
-		fakeConfig: testAccCheckAlicloudPolarClusterEndPointsDataSourceConfig(rand, map[string]string{
-			"cluster_id": `"${alicloud_polardb_cluster.default.id}"`,
+			"cluster_id":     `"${alicloud_polardb_cluster.default.id}"`,
+			"db_endpoint_id": `"^test1234"`,
 		}),
 	}
 
@@ -47,7 +39,7 @@ func TestAccAlicloudPolarClusterEndPointsDataSource(t *testing.T) {
 		fakeMapFunc:  fakePolarClusterMapFunc,
 	}
 
-	PolarClusterCheckInfo.dataSourceTestCheck(t, rand, nameConf, allConf)
+	PolarClusterCheckInfo.dataSourceTestCheck(t, rand, nameConf)
 }
 
 func testAccCheckAlicloudPolarClusterEndPointsDataSourceConfig(rand int, attrMap map[string]string) string {
