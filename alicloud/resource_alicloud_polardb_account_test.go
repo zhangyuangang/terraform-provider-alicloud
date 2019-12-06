@@ -40,7 +40,7 @@ func TestAccAlicloudPolarDBAccount_update(t *testing.T) {
 		"cluster_id": CHECKSET,
 		"name":       "tftestnormal",
 		"password":   "YourPassword_123",
-		"type":       string(DBAccountNormal),
+		"type":       string(PolarDBAccountNormal),
 	}
 	resourceId := "alicloud_polardb_account.default"
 	ra := resourceAttrInit(resourceId, basicMap)
@@ -67,7 +67,7 @@ func TestAccAlicloudPolarDBAccount_update(t *testing.T) {
 					"cluster_id": "${alicloud_polardb_cluster.cluster.id}",
 					"name":       "tftestnormal",
 					"password":   "YourPassword_123",
-					"type":       string(DBAccountNormal),
+					"type":       string(PolarDBAccountNormal),
 				}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheck(nil),
