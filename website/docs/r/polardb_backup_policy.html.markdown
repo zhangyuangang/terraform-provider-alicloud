@@ -10,7 +10,7 @@ description: |-
 
 Provides an PolarDB cluster backup policy resource and used to configure cluster backup policy.
 
--> **NOTE:** Each DB cluster has a backup policy and it will be set default values when destroying the resource.
+-> **NOTE:** Available in v1.65.0+. Each DB cluster has a backup policy and it will be set default values when destroying the resource.
 
 ## Example Usage
 
@@ -44,7 +44,7 @@ resource "alicloud_polardb_cluster" "default" {
   db_version           = "8.0"
   db_node_class        = "polar.mysql.x4.large"
   cluster_charge_type  = "Postpaid"
-  cluster_name         = "${var.name}"
+  description          = "${var.name}"
   vswitch_id           = "vsw-t4nq4tr8wcuj7397rbws2"
 }
 

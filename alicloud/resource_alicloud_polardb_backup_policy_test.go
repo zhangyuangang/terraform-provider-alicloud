@@ -6,30 +6,8 @@ import (
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/polardb"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/terraform-providers/terraform-provider-alicloud/alicloud/connectivity"
 )
-
-func testAccCheckPolarDBBackupPolicyDestroy(s *terraform.State) error {
-	client := testAccProvider.Meta().(*connectivity.AliyunClient)
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "alicloud_polardb_backup_policy" {
-			continue
-		}
-		request := polardb.CreateDescribeBackupPolicyRequest()
-		request.DBClusterId = rs.Primary.ID
-		_, err := client.WithPolarDBClient(func(polardbClient *polardb.Client) (interface{}, error) {
-			return polardbClient.DescribeBackupPolicy(request)
-		})
-		if err != nil {
-			if IsExceptedError(err, InvalidDBClusterIdNotFound) || IsExceptedError(err, InvalidDBClusterNameNotFound) {
-				continue
-			}
-			return WrapError(err)
-		}
-	}
-	return nil
-}
 
 func TestAccAlicloudPolarDBBackupPolicy(t *testing.T) {
 	var v *polardb.DescribeBackupPolicyResponse
@@ -49,7 +27,7 @@ func TestAccAlicloudPolarDBBackupPolicy(t *testing.T) {
 		},
 		IDRefreshName: resourceId,
 		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckPolarDBBackupPolicyDestroy,
+		CheckDestroy:  rac.checkResourceDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccConfig(map[string]interface{}{
@@ -86,7 +64,7 @@ func resourcePolarDBBackupPolicyConfigDependence(name string) string {
 		cluster_charge_type = "Postpaid"
 		db_node_class = "polar.mysql.x4.large"
 		vswitch_id = "${alicloud_vswitch.default.id}"
-		cluster_name = "${var.name}"
+		description = "${var.name}"
 	}
 `, PolarDBCommonTestCase, name)
 }
