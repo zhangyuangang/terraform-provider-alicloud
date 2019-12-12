@@ -369,7 +369,7 @@ func (s *PolarDBService) DescribePolarDBDatabase(id string) (ds *polardb.Databas
 			return polarDBClient.DescribeDatabases(request)
 		})
 		if err != nil {
-			if IsExceptedErrors(err, []string{DBInternalError, InvalidDBClusterStatus}) {
+			if IsExceptedErrors(err, []string{DBInternalError, InvalidDBClusterStatus, InvalidDBClusterIdNotFound}) {
 				time.Sleep(10 * time.Second)
 				return resource.RetryableError(err)
 			}
@@ -380,7 +380,7 @@ func (s *PolarDBService) DescribePolarDBDatabase(id string) (ds *polardb.Databas
 	})
 
 	if err != nil {
-		if IsExceptedErrors(err, []string{DBInternalError, InvalidDBClusterStatus}) {
+		if IsExceptedErrors(err, []string{DBInternalError, InvalidDBClusterStatus, InvalidDBClusterIdNotFound}) {
 			return nil, WrapErrorf(err, NotFoundMsg, AlibabaCloudSdkGoERROR)
 		}
 		return nil, WrapErrorf(err, DefaultErrorMsg, id, request.GetActionName(), AlibabaCloudSdkGoERROR)
