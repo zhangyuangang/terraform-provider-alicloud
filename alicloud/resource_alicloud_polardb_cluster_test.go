@@ -10,27 +10,6 @@ import (
 	"testing"
 )
 
-func testAccCheckPolarDBClusterDestroy(s *terraform.State) error {
-	client := testAccProvider.Meta().(*connectivity.AliyunClient)
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "alicloud_polardb_cluster" {
-			continue
-		}
-		request := polardb.CreateDescribeDBClusterAttributeRequest()
-		request.DBClusterId = rs.Primary.ID
-		_, err := client.WithPolarDBClient(func(polardbClient *polardb.Client) (interface{}, error) {
-			return polardbClient.DescribeDBClusterAttribute(request)
-		})
-		if err != nil {
-			if IsExceptedError(err, InvalidDBClusterIdNotFound) || IsExceptedError(err, InvalidDBClusterNameNotFound) {
-				continue
-			}
-			return WrapError(err)
-		}
-	}
-	return nil
-}
-
 func TestAccAlicloudPolarDBCluster(t *testing.T) {
 	var v *polardb.DescribeDBClusterAttributeResponse
 	var ips []map[string]interface{}
@@ -38,7 +17,7 @@ func TestAccAlicloudPolarDBCluster(t *testing.T) {
 	name := fmt.Sprintf("tf-testacc%sdnsrecordbasic%v.abc", defaultRegionToTest, rand)
 	resourceId := "alicloud_polardb_cluster.default"
 	var basicMap = map[string]string{
-		"cluster_name":  CHECKSET,
+		"description":   CHECKSET,
 		"db_node_class": CHECKSET,
 		"vswitch_id":    CHECKSET,
 		"db_type":       CHECKSET,
@@ -63,7 +42,7 @@ func TestAccAlicloudPolarDBCluster(t *testing.T) {
 		IDRefreshName: resourceId,
 
 		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckPolarDBClusterDestroy,
+		CheckDestroy: rac.checkResourceDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccConfig(map[string]interface{}{
@@ -72,7 +51,7 @@ func TestAccAlicloudPolarDBCluster(t *testing.T) {
 					"cluster_charge_type": "Postpaid",
 					"db_node_class":       "polar.mysql.x4.large",
 					"vswitch_id":          "${alicloud_vswitch.default.id}",
-					"cluster_name":        "${var.name}",
+					"description":         "${var.name}",
 				}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheck(nil),
@@ -82,16 +61,16 @@ func TestAccAlicloudPolarDBCluster(t *testing.T) {
 				ResourceName:      resourceId,
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{"auto_renew", "auto_renew_period",
+				ImportStateVerifyIgnore: []string{"auto_renew", "auto_renew_period", "cluster_network_type",
 					"cluster_charge_type", "effective_time", "period", "renewal_status", "db_node_class"},
 			},
 			{
 				Config: testAccConfig(map[string]interface{}{
-					"cluster_name": "tf-testaccdnsrecordbasic",
+					"description": "tf-testaccdnsrecordbasic",
 				}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheck(map[string]string{
-						"cluster_name": "tf-testaccdnsrecordbasic",
+						"description": "tf-testaccdnsrecordbasic",
 					}),
 				),
 			},

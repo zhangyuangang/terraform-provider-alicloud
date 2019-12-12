@@ -16,23 +16,6 @@ type PolarDBService struct {
 	client *connectivity.AliyunClient
 }
 
-//
-//       _______________                      _______________                       _______________
-//       |              | ______param______\  |              |  _____request_____\  |              |
-//       |   Business   |                     |    Service   |                      |    SDK/API   |
-//       |              | __________________  |              |  __________________  |              |
-//       |______________| \    (obj, err)     |______________|  \ (status, cont)    |______________|
-//                           |                                    |
-//                           |A. {instance, nil}                  |a. {200, content}
-//                           |B. {nil, error}                     |b. {200, nil}
-//                      					  |c. {4xx, nil}
-//
-// The API return 200 for resource not found.
-// When getInstance is empty, then throw InstanceNotfound error.
-// That the business layer only need to check error.
-
-var DBClusterStatusCatcher = Catcher{"OperationDenied.DBInstanceStatus", 60, 5}
-
 func (s *PolarDBService) DescribePolarDBCluster(id string) (instance *polardb.DBCluster, err error) {
 	request := polardb.CreateDescribeDBClustersRequest()
 	request.RegionId = s.client.RegionId
@@ -61,15 +44,17 @@ func (s *PolarDBService) DescribePolarDBClusterAttribute(id string) (instance *p
 	request := polardb.CreateDescribeDBClusterAttributeRequest()
 	request.RegionId = s.client.RegionId
 	request.DBClusterId = id
+
 	raw, err := s.client.WithPolarDBClient(func(polarDBClient *polardb.Client) (interface{}, error) {
 		return polarDBClient.DescribeDBClusterAttribute(request)
 	})
 	if err != nil {
 		if IsExceptedErrors(err, []string{InvalidDBClusterIdNotFound, InvalidDBClusterNameNotFound}) {
-			return nil, WrapErrorf(err, NotFoundMsg, AlibabaCloudSdkGoERROR)
+			return instance, WrapErrorf(err, NotFoundMsg, AlibabaCloudSdkGoERROR)
 		}
-		return nil, WrapErrorf(err, DefaultErrorMsg, id, request.GetActionName(), AlibabaCloudSdkGoERROR)
+		return instance, WrapErrorf(err, DefaultErrorMsg, id, request.GetActionName(), AlibabaCloudSdkGoERROR)
 	}
+
 	addDebug(request.GetActionName(), raw, request.RpcRequest, request)
 	response, _ := raw.(*polardb.DescribeDBClusterAttributeResponse)
 	if len(response.DBClusterId) < 1 {
@@ -182,7 +167,7 @@ func (s *PolarDBService) WaitForPolarDBAccountPrivilegeRevoked(id, dbName string
 	for {
 		object, err := s.DescribePolarDBAccountPrivilege(id)
 		if err != nil {
-			return err
+			return WrapError(err)
 		}
 
 		exist := false
@@ -236,7 +221,7 @@ func (s *PolarDBService) WaitForPolarDBAccountPrivilege(id, dbName string, statu
 		if status == Deleted && !ready {
 			break
 		}
-		if ready {
+		if status != Deleted && ready {
 			break
 		}
 		if time.Now().After(deadline) {
@@ -247,7 +232,7 @@ func (s *PolarDBService) WaitForPolarDBAccountPrivilege(id, dbName string, statu
 	return nil
 }
 
-func (s *PolarDBService) DescribePolarDBAccountPrivilege(id string) (ds *polardb.DBAccount, err error) {
+func (s *PolarDBService) DescribePolarDBAccountPrivilege(id string) (account *polardb.DBAccount, err error) {
 	parts, err := ParseResourceId(id, 3)
 	if err != nil {
 		err = WrapError(err)
@@ -265,7 +250,7 @@ func (s *PolarDBService) DescribePolarDBAccountPrivilege(id string) (ds *polardb
 			return polarDBClient.DescribeAccounts(request)
 		})
 		if err != nil {
-			return err
+			return WrapError(err)
 		}
 		addDebug(request.GetActionName(), raw, request.RpcRequest, request)
 		response, _ = raw.(*polardb.DescribeAccountsResponse)
@@ -296,7 +281,7 @@ func (s *PolarDBService) WaitForPolarDBConnection(id string, status Status, time
 				return WrapError(err)
 			}
 		}
-		if object.ConnectionString != "" {
+		if status != Deleted && object != nil && object.ConnectionString != "" {
 			return nil
 		}
 		if time.Now().After(deadline) {
@@ -378,30 +363,36 @@ func (s *PolarDBService) DescribePolarDBDatabase(id string) (ds *polardb.Databas
 	request.DBClusterId = parts[0]
 	request.DBName = dbName
 
+	var raw interface{}
 	err = resource.Retry(5*time.Minute, func() *resource.RetryError {
-		raw, err := s.client.WithPolarDBClient(func(polarDBClient *polardb.Client) (interface{}, error) {
+		raw, err = s.client.WithPolarDBClient(func(polarDBClient *polardb.Client) (interface{}, error) {
 			return polarDBClient.DescribeDatabases(request)
 		})
 		if err != nil {
-			if IsExceptedErrors(err, []string{DBInternalError, "OperationDenied.DBInstanceStatus"}) {
-				return resource.RetryableError(WrapErrorf(err, DefaultErrorMsg, id, request.GetActionName(), AlibabaCloudSdkGoERROR))
+			if IsExceptedErrors(err, []string{DBInternalError, InvalidDBClusterStatus}) {
+				time.Sleep(10 * time.Second)
+				return resource.RetryableError(err)
 			}
-			if s.NotFoundPolarDBInstance(err) || IsExceptedErrors(err, []string{InvalidDBClusterNameNotFound}) {
-				return resource.NonRetryableError(WrapErrorf(err, NotFoundMsg, AlibabaCloudSdkGoERROR))
-			}
-			return resource.NonRetryableError(WrapErrorf(err, DefaultErrorMsg, id, request.GetActionName(), AlibabaCloudSdkGoERROR))
+			return resource.NonRetryableError(err)
 		}
-
 		addDebug(request.GetActionName(), raw, request.RpcRequest, request)
-
-		response, _ := raw.(*polardb.DescribeDatabasesResponse)
-		if len(response.Databases.Database) < 1 {
-			return resource.NonRetryableError(WrapErrorf(Error(GetNotFoundMessage("DBDatabase", dbName)), NotFoundMsg, ProviderERROR))
-		}
-		ds = &response.Databases.Database[0]
 		return nil
 	})
-	return
+
+	if err != nil {
+		if IsExceptedErrors(err, []string{DBInternalError, InvalidDBClusterStatus}) {
+			return nil, WrapErrorf(err, NotFoundMsg, AlibabaCloudSdkGoERROR)
+		}
+		return nil, WrapErrorf(err, DefaultErrorMsg, id, request.GetActionName(), AlibabaCloudSdkGoERROR)
+	}
+
+	addDebug(request.GetActionName(), raw, request.RpcRequest, request)
+	response, _ := raw.(*polardb.DescribeDatabasesResponse)
+	if len(response.Databases.Database) < 1 {
+		return nil, WrapErrorf(Error(GetNotFoundMessage("DBDatabase", dbName)), NotFoundMsg, ProviderERROR)
+	}
+	ds = &response.Databases.Database[0]
+	return ds, nil
 }
 
 func (s *PolarDBService) WaitForPolarDBDatabase(id string, status Status, timeout int) error {
@@ -420,7 +411,7 @@ func (s *PolarDBService) WaitForPolarDBDatabase(id string, status Status, timeou
 			}
 			return WrapError(err)
 		}
-		if object.DBName == parts[1] {
+		if status != Deleted && object != nil && object.DBName == parts[1] {
 			break
 		}
 		time.Sleep(DefaultIntervalShort * time.Second)

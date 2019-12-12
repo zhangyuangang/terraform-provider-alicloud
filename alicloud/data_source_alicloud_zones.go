@@ -237,12 +237,12 @@ func dataSourceAlicloudZonesRead(d *schema.ResourceData, meta interface{}) error
 			return polarDBClient.DescribeRegions(request)
 		})
 		if err != nil {
-			return fmt.Errorf("[ERROR] DescribeRegions got an error: %#v", err)
+			return WrapError(fmt.Errorf("[ERROR] DescribeRegions got an error: %#v", err))
 		}
 		addDebug(request.GetActionName(), raw, request.RpcRequest, request)
 		regions, _ := raw.(*polardb.DescribeRegionsResponse)
 		if len(regions.Regions.Region) <= 0 {
-			return fmt.Errorf("[ERROR] There is no available region for RDS.")
+			return WrapError(fmt.Errorf("[ERROR] There is no available region for PolarDB."))
 		}
 		for _, r := range regions.Regions.Region {
 			if multi && strings.Contains(r.Zones.Zone[0].ZoneId, MULTI_IZ_SYMBOL) && r.RegionId == string(client.Region) {
@@ -260,12 +260,12 @@ func dataSourceAlicloudZonesRead(d *schema.ResourceData, meta interface{}) error
 			return rkvClient.DescribeAvailableResource(request)
 		})
 		if err != nil {
-			return fmt.Errorf("[ERROR] DescribeAvailableResource got an error: %#v", err)
+			return WrapError(fmt.Errorf("[ERROR] DescribeAvailableResource got an error: %#v", err))
 		}
 		addDebug(request.GetActionName(), raw, request.RpcRequest, request)
 		zones, _ := raw.(*r_kvstore.DescribeAvailableResourceResponse)
 		if len(zones.AvailableZones.AvailableZone) <= 0 {
-			return fmt.Errorf("[ERROR] There is no available zones for KVStore")
+			return WrapError(fmt.Errorf("[ERROR] There is no available zones for KVStore"))
 		}
 		for _, zone := range zones.AvailableZones.AvailableZone {
 			if multi && strings.Contains(zone.ZoneId, MULTI_IZ_SYMBOL) {

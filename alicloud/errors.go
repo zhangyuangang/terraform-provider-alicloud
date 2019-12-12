@@ -168,8 +168,12 @@ const (
 	DBOperationDeniedOutofUsage            = "OperationDenied.OutofUsage"
 
 	// polarDB
-	InvalidDBClusterIdNotFound   = "InvalidDBClusterId.NotFound"
-	InvalidDBClusterNameNotFound = "InvalidDBClusterName.NotFound"
+	InvalidDBClusterIdNotFound      = "InvalidDBClusterId.NotFound"
+	InvalidDBClusterNameNotFound    = "InvalidDBClusterName.NotFound"
+	InvalidDBClusterStatus          = "OperationDenied.DBClusterStatus"
+	EndpointStatusNotSupport        = "EndpointStatus.NotSupport"
+	InvalidPolarDBClusterStatus     = "OperationDenied.PolarDBClusterStatus"
+	InvalidReadPolarDBClusterStatus = "OperationDenied.ReadPolarDBClusterStatus"
 
 	// oss
 	OssBucketNotFound                 = "NoSuchBucket"

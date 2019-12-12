@@ -26,8 +26,8 @@ func resourceAlicloudPolarDBCluster() *schema.Resource {
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(30 * time.Minute),
-			Update: schema.DefaultTimeout(30 * time.Minute),
-			Delete: schema.DefaultTimeout(20 * time.Minute),
+			Update: schema.DefaultTimeout(20 * time.Minute),
+			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -50,14 +50,6 @@ func resourceAlicloudPolarDBCluster() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
-			},
-			"cluster_network_type": {
-				Type:     schema.TypeString,
-				Optional: true,
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					return true
-				},
-				Deprecated: "Field 'cluster_network_type' has been deprecated from provider version 1.5.0.",
 			},
 			"cluster_charge_type": {
 				Type:         schema.TypeString,
@@ -107,7 +99,7 @@ func resourceAlicloudPolarDBCluster() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"cluster_name": {
+			"description": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				ValidateFunc: validation.StringLenBetween(2, 256),
@@ -155,7 +147,7 @@ func resourceAlicloudPolarDBClusterCreate(d *schema.ResourceData, meta interface
 	if err != nil {
 		return WrapErrorf(err, DefaultErrorMsg, "alicloud_polardb_cluster", request.GetActionName(), AlibabaCloudSdkGoERROR)
 	}
-
+	addDebug(request.GetActionName(), raw, request.RpcRequest, request)
 	response, _ := raw.(*polardb.CreateDBClusterResponse)
 	d.SetId(response.DBClusterId)
 
@@ -172,7 +164,6 @@ func resourceAlicloudPolarDBClusterUpdate(d *schema.ResourceData, meta interface
 	client := meta.(*connectivity.AliyunClient)
 	polarDBService := PolarDBService{client}
 	d.Partial(true)
-	stateConf := BuildStateConf([]string{"Creating"}, []string{"Running"}, d.Timeout(schema.TimeoutUpdate), 10*time.Minute, polarDBService.PolarDBClusterStateRefreshFunc(d.Id(), []string{"Deleting"}))
 
 	if d.HasChange("parameters") {
 		if err := polarDBService.ModifyParameters(d, d.Get("effective_time").(string), d.Get("parameters").(string)); err != nil {
@@ -205,10 +196,6 @@ func resourceAlicloudPolarDBClusterUpdate(d *schema.ResourceData, meta interface
 			return WrapErrorf(err, DefaultErrorMsg, d.Id(), request.GetActionName(), AlibabaCloudSdkGoERROR)
 		}
 		addDebug(request.GetActionName(), raw, request.RpcRequest, request)
-		// wait cluster status is Normal after modifying
-		if _, err := stateConf.WaitForState(); err != nil {
-			return WrapErrorf(err, IdMsg, d.Id())
-		}
 		d.SetPartial("renewal_status")
 		d.SetPartial("auto_renew_period")
 	}
@@ -234,11 +221,11 @@ func resourceAlicloudPolarDBClusterUpdate(d *schema.ResourceData, meta interface
 		return resourceAlicloudPolarDBClusterRead(d, meta)
 	}
 
-	if d.HasChange("cluster_name") {
+	if d.HasChange("description") {
 		request := polardb.CreateModifyDBClusterDescriptionRequest()
 		request.RegionId = client.RegionId
 		request.DBClusterId = d.Id()
-		request.DBClusterDescription = d.Get("cluster_name").(string)
+		request.DBClusterDescription = d.Get("description").(string)
 
 		raw, err := client.WithPolarDBClient(func(polarDBClient *polardb.Client) (interface{}, error) {
 			return polarDBClient.ModifyDBClusterDescription(request)
@@ -247,7 +234,7 @@ func resourceAlicloudPolarDBClusterUpdate(d *schema.ResourceData, meta interface
 			return WrapErrorf(err, DefaultErrorMsg, d.Id(), request.GetActionName(), AlibabaCloudSdkGoERROR)
 		}
 		addDebug(request.GetActionName(), raw, request.RpcRequest, request)
-		d.SetPartial("cluster_name")
+		d.SetPartial("description")
 	}
 
 	if d.HasChange("security_ips") {
@@ -289,11 +276,10 @@ func resourceAlicloudPolarDBClusterRead(d *schema.ResourceData, meta interface{}
 
 	d.Set("security_ips", ips)
 
-	d.Set("cluster_network_type", cluster.DBClusterNetworkType)
 	d.Set("vswitch_id", cluster.VSwitchId)
 	d.Set("pay_type", cluster.PayType)
 	d.Set("id", cluster.DBClusterId)
-	d.Set("cluster_name", cluster.DBClusterDescription)
+	d.Set("description", cluster.DBClusterDescription)
 	d.Set("db_type", cluster.DBType)
 	d.Set("db_version", cluster.DBVersion)
 	d.Set("maintain_time", cluster.MaintainTime)
@@ -338,8 +324,10 @@ func resourceAlicloudPolarDBClusterDelete(d *schema.ResourceData, meta interface
 		}
 		return WrapError(err)
 	}
-	if PayType(cluster.PayType) == Prepaid {
-		return WrapError(Error("At present, 'Prepaid' cluster cannot be deleted and must wait it to be expired and release it automatically."))
+
+	// Pre paid cluster can not be release.
+	if PayType(cluster.PayType) == PrePaid {
+		return nil
 	}
 
 	request := polardb.CreateDeleteDBClusterRequest()
@@ -351,7 +339,7 @@ func resourceAlicloudPolarDBClusterDelete(d *schema.ResourceData, meta interface
 		})
 
 		if err != nil && !polarDBService.NotFoundCluster(err) {
-			if IsExceptedErrors(err, []string{"OperationDenied.DBClusterStatus", "OperationDenied.PolarDBClusterStatus", "OperationDenied.ReadPolarDBClusterStatus"}) {
+			if IsExceptedErrors(err, []string{InvalidDBClusterStatus, InvalidPolarDBClusterStatus, InvalidReadPolarDBClusterStatus}) {
 				return resource.RetryableError(err)
 			}
 			return resource.NonRetryableError(err)
@@ -364,7 +352,10 @@ func resourceAlicloudPolarDBClusterDelete(d *schema.ResourceData, meta interface
 	if err != nil {
 		return WrapErrorf(err, DefaultErrorMsg, d.Id(), request.GetActionName(), AlibabaCloudSdkGoERROR)
 	}
-
+	stateConf := BuildStateConf([]string{"Creating", "Running", "Deleting"}, []string{}, d.Timeout(schema.TimeoutDelete), 1*time.Minute, polarDBService.PolarDBClusterStateRefreshFunc(d.Id(), []string{}))
+	if _, err = stateConf.WaitForState(); err != nil {
+		return WrapErrorf(err, IdMsg, d.Id())
+	}
 	return nil
 }
 
@@ -376,7 +367,7 @@ func buildPolarDBCreateRequest(d *schema.ResourceData, meta interface{}) (*polar
 	request.DBType = Trim(d.Get("db_type").(string))
 	request.DBVersion = Trim(d.Get("db_version").(string))
 	request.DBNodeClass = d.Get("db_node_class").(string)
-	request.DBClusterDescription = d.Get("cluster_name").(string)
+	request.DBClusterDescription = d.Get("description").(string)
 	request.ClientToken = buildClientToken(request.GetActionName())
 
 	if zone, ok := d.GetOk("zone_id"); ok && Trim(zone.(string)) != "" {

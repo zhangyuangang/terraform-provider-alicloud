@@ -9,13 +9,15 @@ description: |-
 # alicloud\_polardb\_clusters
 
 The `alicloud_polardb_clusters` data source provides a collection of PolarDB clusters available in Alibaba Cloud account.
-Filters support regular expression for the cluster name, searches by tags, and other filters which are listed below.
+Filters support regular expression for the cluster description, searches by tags, and other filters which are listed below.
+
+-> **NOTE:** Available in v1.65.0+.
 
 ## Example Usage
 
 ```
 data "alicloud_polardb_clusters" "polardb_clusters_ds" {
-  name_regex = "pc-\\w+"
+  description_regex = "pc-\\w+"
   status     = "Running"
 }
 
@@ -28,9 +30,8 @@ output "first_polardb_cluster_id" {
 
 The following arguments are supported:
 
-* `name_regex` - (Optional) A regex string to filter results by cluster name.
+* `description_regex` - (Optional) A regex string to filter results by cluster description.
 * `ids` - (Optional) A list of PolarDB cluster IDs. 
-* `description` - (Optional) description of the cluster.
 * `status` - (Optional) status of the cluster.
 * `db_type` - (Optional) Database type. Options are `MySQL`, `PostgreSQL` and `Oracle`. If no value is specified, all types are returned.
 * `tags` - (Optional) Query the cluster bound to the tag. The format of the incoming value is `json` string, including `TagKey` and `TagValue`. `TagKey` cannot be null, and `TagValue` can be empty. Format example `{"key1":"value1"}`.
@@ -41,10 +42,10 @@ The following arguments are supported:
 The following attributes are exported in addition to the arguments listed above:
 
 * `ids` - A list of RDS cluster IDs. 
-* `names` - A list of RDS cluster names. 
+* `descriptions` - A list of RDS cluster descriptions. 
 * `clusters` - A list of PolarDB clusters. Each element contains the following attributes:
   * `id` - The ID of the PolarDB cluster.
-  * `name` - The name of the PolarDB cluster.
+  * `description` - The description of the PolarDB cluster.
   * `charge_type` - Billing method. Value options: `Postpaid` for Pay-As-You-Go and `Prepaid` for subscription.
   * `network_type` - The DBClusterNetworkType of the PolarDB cluster.
   * `region_id` - Region ID the cluster belongs to.
@@ -62,5 +63,14 @@ The following attributes are exported in addition to the arguments listed above:
   * `db_node_number` - The DBNodeNumber of the PolarDB cluster.
   * `db_node_class` - The DBNodeClass of the PolarDB cluster.
   * `storage_used` - The StorageUsed of the PolarDB cluster.
-  * `db_nodes` - The DBNodes of the PolarDB cluster.
   * `tags` - The Tags json of the PolarDB cluster.
+  * `db_nodes` - The DBNodes of the PolarDB cluster.
+    * `db_node_class` - The db_node_class of the db_nodes.
+    * `max_iops` - The max_iops of the db_nodes.
+    * `region_id` - The region_id of the db_nodes.
+    * `db_node_role` - The db_node_role of the db_nodes.
+    * `max_connections` - The max_connections of the db_nodes.
+    * `zone_id` - The zone_id of the db_nodes.
+    * `db_node_status` - The db_node_status of the db_nodes.
+    * `db_node_id` - The db_node_id of the db_nodes.
+    * `create_time` - The create_time of the db_nodes.

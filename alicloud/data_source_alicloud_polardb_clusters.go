@@ -16,7 +16,7 @@ func dataSourceAlicloudPolarDBClusters() *schema.Resource {
 		Read: dataSourceAlicloudPolarDBClustersRead,
 
 		Schema: map[string]*schema.Schema{
-			"name_regex": {
+			"description_regex": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				ValidateFunc: validation.ValidateRegexp,
@@ -26,19 +26,13 @@ func dataSourceAlicloudPolarDBClusters() *schema.Resource {
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
-			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
 			"status": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
 			"db_type": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				ValidateFunc: validation.StringInSlice([]string{"MySQL", "PostgreSQL", "Oracle"}, false),
-				Default:      "MySQL",
+				Type:     schema.TypeString,
+				Optional: true,
 			},
 			"tags": {
 				Type:     schema.TypeString,
@@ -50,7 +44,7 @@ func dataSourceAlicloudPolarDBClusters() *schema.Resource {
 			},
 
 			// Computed values
-			"names": {
+			"descriptions": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
@@ -64,7 +58,7 @@ func dataSourceAlicloudPolarDBClusters() *schema.Resource {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"name": {
+						"description": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
@@ -197,7 +191,6 @@ func dataSourceAlicloudPolarDBClustersRead(d *schema.ResourceData, meta interfac
 	request := polardb.CreateDescribeDBClustersRequest()
 
 	request.RegionId = client.RegionId
-	request.DBClusterDescription = d.Get("description").(string)
 	request.DBClusterStatus = d.Get("status").(string)
 	request.DBType = d.Get("db_type").(string)
 	if v, ok := d.GetOk("tags"); ok {
@@ -215,13 +208,13 @@ func dataSourceAlicloudPolarDBClustersRead(d *schema.ResourceData, meta interfac
 
 	var dbi []polardb.DBCluster
 
-	var nameRegex *regexp.Regexp
-	if v, ok := d.GetOk("name_regex"); ok {
+	var descriptionRegex *regexp.Regexp
+	if v, ok := d.GetOk("description_regex"); ok {
 		r, err := regexp.Compile(v.(string))
 		if err != nil {
 			return WrapError(err)
 		}
-		nameRegex = r
+		descriptionRegex = r
 	}
 
 	// ids
@@ -246,8 +239,8 @@ func dataSourceAlicloudPolarDBClustersRead(d *schema.ResourceData, meta interfac
 
 		for _, item := range response.Items.DBCluster {
 
-			if nameRegex != nil {
-				if !nameRegex.MatchString(item.DBClusterDescription) {
+			if descriptionRegex != nil {
+				if !descriptionRegex.MatchString(item.DBClusterDescription) {
 					continue
 				}
 			}
@@ -276,7 +269,7 @@ func dataSourceAlicloudPolarDBClustersRead(d *schema.ResourceData, meta interfac
 
 func polarDBClustersDescription(d *schema.ResourceData, dbi []polardb.DBCluster) error {
 	var ids []string
-	var names []string
+	var descriptions []string
 	var s []map[string]interface{}
 
 	for _, item := range dbi {
@@ -301,7 +294,7 @@ func polarDBClustersDescription(d *schema.ResourceData, dbi []polardb.DBCluster)
 		}
 		mapping := map[string]interface{}{
 			"id":             item.DBClusterId,
-			"name":           item.DBClusterDescription,
+			"description":    item.DBClusterDescription,
 			"charge_type":    item.PayType,
 			"network_type":   item.DBClusterNetworkType,
 			"region_id":      item.RegionId,
@@ -324,7 +317,7 @@ func polarDBClustersDescription(d *schema.ResourceData, dbi []polardb.DBCluster)
 		}
 
 		ids = append(ids, item.DBClusterId)
-		names = append(names, item.DBClusterDescription)
+		descriptions = append(descriptions, item.DBClusterDescription)
 		s = append(s, mapping)
 	}
 
@@ -335,7 +328,7 @@ func polarDBClustersDescription(d *schema.ResourceData, dbi []polardb.DBCluster)
 	if err := d.Set("ids", ids); err != nil {
 		return WrapError(err)
 	}
-	if err := d.Set("names", names); err != nil {
+	if err := d.Set("descriptions", descriptions); err != nil {
 		return WrapError(err)
 	}
 

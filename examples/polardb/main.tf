@@ -18,6 +18,6 @@ resource "alicloud_polardb_cluster" "default" {
   db_version           = "8.0"
   db_node_class        = "polar.mysql.x4.large"
   cluster_charge_type  = "Postpaid"
-  cluster_name        = "${var.name}"
+  description        = "${var.name}"
   vswitch_id           = "${alicloud_vswitch.default.id}"
 }
