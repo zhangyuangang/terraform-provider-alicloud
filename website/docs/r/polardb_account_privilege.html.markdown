@@ -10,6 +10,8 @@ description: |-
 
 Provides an PolarDB account privilege resource and used to grant several database some access privilege. A database can be granted by multiple account.
 
+-> **NOTE:** Available in v1.65.0+.
+
 ## Example Usage
 
 ```
@@ -37,12 +39,13 @@ resource "alicloud_vswitch" "default" {
   name              = "${var.name}"
 }
 
-resource "alicloud_polardb_instance" "cluster" {
-  db_type          = "MySQL"
-  db_version       = "8.0"
+resource "alicloud_polardb_cluster" "default" {
+  db_type = "MySQL"
+  db_version = "8.0"
+  cluster_charge_type = "Postpaid"
   db_node_class    = "polar.mysql.x4.large"
-  vswitch_id       = "${alicloud_vswitch.default.id}"
-  instance_name    = "${var.name}"
+  vswitch_id = "${alicloud_vswitch.default.id}"
+  description = "${var.name}"
 }
 
 resource "alicloud_polardb_database" "db" {
@@ -73,7 +76,7 @@ The following arguments are supported:
 
 * `cluster_id` - (Required, ForceNew) The Id of cluster in which account belongs.
 * `account_name` - (Required, ForceNew) A specified account name.
-* `privilege` - The privilege of one account access database. Valid values: ["ReadOnly", "ReadWrite"]. Default to "ReadOnly".
+* `privilege` - (Optional, ForceNew) The privilege of one account access database. Valid values: ["ReadOnly", "ReadWrite"]. Default to "ReadOnly".
 * `db_names` - (Required) List of specified database name.
 
 ## Attributes Reference
