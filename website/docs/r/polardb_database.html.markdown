@@ -10,6 +10,8 @@ description: |-
 
 Provides an PolarDB database resource. A DB database deployed in a DB cluster. A DB cluster can own multiple databases.
 
+-> **NOTE:** Available in v1.65.0+.
+
 ## Example Usage
 
 ```
@@ -43,7 +45,7 @@ Provides an PolarDB database resource. A DB database deployed in a DB cluster. A
 		cluster_charge_type = "${var.clusterchargetype}"
 		db_node_class = "${var.clusterclass}"
 		vswitch_id = "${alicloud_vswitch.default.id}"
-		cluster_name = "${var.name}"
+		description = "${var.name}"
 	}
 
     resource "alicloud_polardb_database" "default" {
@@ -57,10 +59,10 @@ Provides an PolarDB database resource. A DB database deployed in a DB cluster. A
 The following arguments are supported:
 
 * `cluster_id` - (Required, ForceNew) The Id of cluster that can run database.
-* `name` - (Required, ForceNew) Name of the database requiring a uniqueness check. It may consist of lower case letters, numbers, and underlines, and must start with a letter
-                      and have no more than 64 characters.
-* `character_set` - (Required) Character set. The value range is limited to the following: [ utf8, gbk, latin1, utf8mb4, Chinese_PRC_CI_AS, Chinese_PRC_CS_AS, SQL_Latin1_General_CP1_CI_AS, SQL_Latin1_General_CP1_CS_AS, Chinese_PRC_BIN ] \(`utf8mb4` only supports versions 5.5 and 5.6\).
-
+* `name` - (Required, ForceNew) Name of the database requiring a uniqueness check. It may consist of lower case letters, numbers, and underlines, and must start with a letterand have no more than 64 characters.
+* `character_set` - (Optional,ForceNew) Character set. The value range is limited to the following: [ utf8, gbk, latin1, utf8mb4, Chinese_PRC_CI_AS, Chinese_PRC_CS_AS, SQL_Latin1_General_CP1_CI_AS, SQL_Latin1_General_CP1_CS_AS, Chinese_PRC_BIN ] \(`utf8mb4` only supports versions 5.5 and 5.6\).
+* `account_name` - (Required) The account_name of cluster that can run database.
+* `account_privilege` - (Optional) The Id of cluster that can run database. Valid values are `ReadOnly`, `ReadWrite`,`DMLOnly`, `DDLOnly`, Default to `Postpaid`.
 * `description` - (Optional) Database description. It cannot begin with https://. It must start with a Chinese character or English letter. It can include Chinese and English characters, underlines (_), hyphens (-), and numbers. The length may be 2-256 characters.
 
 

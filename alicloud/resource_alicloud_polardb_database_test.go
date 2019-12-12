@@ -3,44 +3,15 @@ package alicloud
 import (
 	"fmt"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/polardb"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/terraform-providers/terraform-provider-alicloud/alicloud/connectivity"
 )
 
-func testAccCheckPolarDBDatabaseDestroy(s *terraform.State) error {
-	client := testAccProvider.Meta().(*connectivity.AliyunClient)
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "alicloud_polardb_database" {
-			continue
-		}
-		request := polardb.CreateDescribeDatabasesRequest()
-		request.DBClusterId = rs.Primary.ID
-		_, err := client.WithPolarDBClient(func(polarDBClient *polardb.Client) (interface{}, error) {
-			return polarDBClient.DescribeDatabases(request)
-		})
-		if err != nil {
-			if IsExceptedError(err, InvalidDBClusterIdNotFound) || IsExceptedError(err, InvalidDBClusterNameNotFound) {
-				continue
-			}
-			return WrapError(err)
-		}
-	}
-	return nil
-}
-
 func TestAccAlicloudPolarDBDatabase_update(t *testing.T) {
 	var database *polardb.Database
 	resourceId := "alicloud_polardb_database.default"
-
-	//var dbDatabaseBasicMap = map[string]string{
-	//	"cluster_id":    CHECKSET,
-	//	"name":          "tftestdatabase",
-	//	"character_set": "utf8",
-	//	"description":   "",
-	//}
 
 	ra := resourceAttrInit(resourceId, nil)
 	rc := resourceCheckInitWithDescribeMethod(resourceId, &database, func() interface{} {
@@ -59,7 +30,7 @@ func TestAccAlicloudPolarDBDatabase_update(t *testing.T) {
 		IDRefreshName: resourceId,
 
 		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckPolarDBDatabaseDestroy,
+		CheckDestroy: rac.checkResourceDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccConfig(map[string]interface{}{
@@ -122,6 +93,6 @@ func resourcePolarDBDatabaseConfigDependence(name string) string {
 		cluster_charge_type = "${var.instancechargetype}"
 		db_node_class = "${var.instanceclass}"
 		vswitch_id = "${alicloud_vswitch.default.id}"
-		cluster_name = "${var.name}"
+		description = "${var.name}"
 	}`, PolarDBCommonTestCase, name)
 }
