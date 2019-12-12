@@ -10,7 +10,7 @@ description: |-
 
 Provides an PolarDB account resource and used to manage databases.
 
--> **NOTE:** Currently, only MySQL、MariaDB、SQL Server（exclude SQL Server 2017 clustered edition）instance support creating a `Normal` account. Other engine instance, like PostgreSQL, PPAS and SQL Server 2017, only support creating a `Super` account, and you can log on to the database to create other accounts using this Super account.
+-> **NOTE:** Available in v1.65.0+. Currently, only MySQL、MariaDB、SQL Server（exclude SQL Server 2017 clustered edition）instance support creating a `Normal` account. Other engine instance, like PostgreSQL, PPAS and SQL Server 2017, only support creating a `Super` account, and you can log on to the database to create other accounts using this Super account.
 > **NOTE:** Because the `Super` account can not be deleted, there does not suggest to manage `Super` account using this resource. Otherwise, this resource can not be deleted when account is `Super`.
 
 ## Example Usage
@@ -46,7 +46,7 @@ resource "alicloud_polardb_cluster" "cluster" {
   db_node_class         = "polar.mysql.x4.large"
   cluster_charge_type   = "Postpaid"
   vswitch_id            = "${alicloud_vswitch.default.id}"
-  cluster_name          = "${var.name}"
+  description           = "${var.name}"
 }
 
 resource "alicloud_db_account" "account" {
