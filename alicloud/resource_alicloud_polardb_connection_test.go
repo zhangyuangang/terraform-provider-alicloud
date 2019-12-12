@@ -3,34 +3,12 @@ package alicloud
 import (
 	"fmt"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/polardb"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/terraform-providers/terraform-provider-alicloud/alicloud/connectivity"
 )
-
-func testAccCheckPolarDBConnectionDestroy(s *terraform.State) error {
-	client := testAccProvider.Meta().(*connectivity.AliyunClient)
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "alicloud_polardb_connection" {
-			continue
-		}
-		request := polardb.CreateDescribeDBClusterEndpointsRequest()
-		request.DBClusterId = rs.Primary.ID
-		_, err := client.WithPolarDBClient(func(polarDBClient *polardb.Client) (interface{}, error) {
-			return polarDBClient.DescribeDBClusterEndpoints(request)
-		})
-		if err != nil {
-			if IsExceptedError(err, InvalidDBClusterIdNotFound) || IsExceptedError(err, InvalidDBClusterNameNotFound) {
-				continue
-			}
-			return WrapError(err)
-		}
-	}
-	return nil
-}
 
 func TestAccAlicloudPolarDBConnectionConfigUpdate(t *testing.T) {
 	var v *polardb.Address
@@ -59,7 +37,7 @@ func TestAccAlicloudPolarDBConnectionConfigUpdate(t *testing.T) {
 		IDRefreshName: resourceId,
 
 		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckPolarDBConnectionDestroy,
+		CheckDestroy: rac.checkResourceDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccConfig(map[string]interface{}{
@@ -124,7 +102,7 @@ func resourcePolarDBConnectionConfigDependence(name string) string {
 		cluster_charge_type = "${var.instancechargetype}"
 		db_node_class = "${var.instanceclass}"
 		vswitch_id = "vsw-t4nlb8goj0as5zaau0cm0"
-		cluster_name = "${var.name}"
+		description = "${var.name}"
 	}
 
 	data "alicloud_polardb_endpoints" "default1" {

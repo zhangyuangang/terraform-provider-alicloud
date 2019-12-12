@@ -10,7 +10,7 @@ description: |-
 
 Provides an RDS connection resource to allocate an Internet connection string for RDS instance.
 
--> **NOTE:** Each PolarDB instance will allocate a intranet connection string automatically and its prefix is Cluster ID.
+-> **NOTE:** Available in v1.65.0+. Each PolarDB instance will allocate a intranet connection string automatically and its prefix is Cluster ID.
  To avoid unnecessary conflict, please specified a internet connection prefix before applying the resource.
 
 ## Example Usage
@@ -45,7 +45,7 @@ resource "alicloud_polardb_cluster" "default" {
   db_version        = "8.0"
   db_node_class     = "polar.mysql.x4.large"
   vswitch_id        = "${alicloud_vswitch.default.id}"
-  cluster_name      = "${var.name}"
+  description       = "${var.name}"
 }
 
 data "alicloud_polardb_endpoints" "default" {
@@ -67,7 +67,7 @@ The following arguments are supported:
 * `cluster_id` - (Required, ForceNew) The Id of cluster that can run database.
 * `db_endpoint_id` - (Required, ForceNew) The Id of endpoint that can run database.
 * `connection_prefix` - (Optional) Prefix of an Internet connection string. It must be checked for uniqueness. It may consist of lowercase letters, numbers, and underlines, and must start with a letter and have no more than 30 characters. Default to <db_endpoint_id> + 'tf'.
-* `net_type` - (Required) Internet connection net type. Valid value: "Public","Private". Default to Public.
+* `net_type` - (Required,ForceNew) Internet connection net type. Valid value: "Public","Private". Default to Public.
 
 ## Attributes Reference
 

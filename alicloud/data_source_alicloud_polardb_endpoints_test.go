@@ -78,7 +78,7 @@ func testAccCheckAlicloudPolarClusterEndPointsDataSourceConfig(rand int, attrMap
 	  db_version        = "8.0"
 	  db_node_class     = "polar.mysql.x4.large"
 	  vswitch_id        = "${alicloud_vswitch.default.id}"
-	  cluster_name      = "${var.name}"
+	  description       = "${var.name}"
 	}
 	
 	data "alicloud_polardb_endpoints" "default" {

@@ -11,6 +11,8 @@ description: |-
 The `alicloud_polardb_endpoints` data source provides a collection of PolarDB endpoints available in Alibaba Cloud account.
 Filters support regular expression for the cluster name, searches by clusterId, and other filters which are listed below.
 
+-> **NOTE:** Available in v1.65.0+.
+
 ## Example Usage
 
 ```

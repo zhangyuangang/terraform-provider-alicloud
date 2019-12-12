@@ -48,7 +48,6 @@ func resourceAlicloudPolarDBConnection() *schema.Resource {
 			"connection_prefix": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Computed:     true,
 				ValidateFunc: validation.StringLenBetween(1, 31),
 			},
 			"port": {
@@ -226,7 +225,7 @@ func resourceAlicloudPolarDBConnectionDelete(d *schema.ResourceData, meta interf
 			return polarDBClient.DeleteDBEndpointAddress(request)
 		})
 		if err != nil {
-			if IsExceptedErrors(err, []string{"OperationDenied.DBClusterStatus", "EndpointStatus.NotSupport"}) {
+			if IsExceptedErrors(err, []string{InvalidDBClusterStatus, EndpointStatusNotSupport}) {
 				return resource.RetryableError(err)
 			}
 			return resource.NonRetryableError(err)
